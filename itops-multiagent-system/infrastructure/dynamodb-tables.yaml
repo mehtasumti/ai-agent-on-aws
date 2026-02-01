@@ -1,0 +1,190 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'DynamoDB Tables for IT Operations Multi-Agent System'
+
+Resources:
+  # Table 1: Incidents - Stores all IT incidents
+  IncidentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: ITOps-Incidents
+      BillingMode: PAY_PER_REQUEST  # On-demand pricing
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true  # Encryption at rest
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      AttributeDefinitions:
+        - AttributeName: incident_id
+          AttributeType: S  # String
+        - AttributeName: created_at
+          AttributeType: N  # Number (timestamp)
+        - AttributeName: status
+          AttributeType: S
+      KeySchema:
+        - AttributeName: incident_id
+          KeyType: HASH    # Partition key
+        - AttributeName: created_at
+          KeyType: RANGE   # Sort key
+      GlobalSecondaryIndexes:
+        - IndexName: status-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Project
+          Value: ITOps-MultiAgent
+
+  # Table 2: Agent State - Maintains agent memory and context
+  AgentStateTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: ITOps-AgentState
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+      AttributeDefinitions:
+        - AttributeName: agent_id
+          AttributeType: S
+        - AttributeName: session_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: agent_id
+          KeyType: HASH
+        - AttributeName: session_id
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true  # Auto-delete old sessions
+
+  # Table 3: Knowledge Base - Stores resolution procedures
+  KnowledgeBaseTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: ITOps-KnowledgeBase
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+      AttributeDefinitions:
+        - AttributeName: kb_id
+          AttributeType: S
+        - AttributeName: category
+          AttributeType: S
+      KeySchema:
+        - AttributeName: kb_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: category-index
+          KeySchema:
+            - AttributeName: category
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  # Table 4: Approval Queue - Manages human approvals
+  ApprovalQueueTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: ITOps-ApprovalQueue
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      AttributeDefinitions:
+        - AttributeName: approval_id
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: N
+      KeySchema:
+        - AttributeName: approval_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: status-created-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  # Table 5: Circuit Breaker - Fault tolerance state
+  CircuitBreakerTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: ITOps-CircuitBreaker
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+      AttributeDefinitions:
+        - AttributeName: service_name
+          AttributeType: S
+      KeySchema:
+        - AttributeName: service_name
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  # Table 6: Conversations - Chat history
+  ConversationTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: ITOps-Conversations
+      BillingMode: PAY_PER_REQUEST
+      SSESpecification:
+        SSEEnabled: true
+      AttributeDefinitions:
+        - AttributeName: conversation_id
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: N
+      KeySchema:
+        - AttributeName: conversation_id
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+# Export table names for use by other stacks
+Outputs:
+  IncidentsTableName:
+    Value: !Ref IncidentsTable
+    Export:
+      Name: ITOps-IncidentsTable
+
+  AgentStateTableName:
+    Value: !Ref AgentStateTable
+    Export:
+      Name: ITOps-AgentStateTable
+
+  KnowledgeBaseTableName:
+    Value: !Ref KnowledgeBaseTable
+    Export:
+      Name: ITOps-KnowledgeBaseTable
+
+  ApprovalQueueTableName:
+    Value: !Ref ApprovalQueueTable
+    Export:
+      Name: ITOps-ApprovalQueueTable
+
+  CircuitBreakerTableName:
+    Value: !Ref CircuitBreakerTable
+    Export:
+      Name: ITOps-CircuitBreakerTable
+
+  ConversationTableName:
+    Value: !Ref ConversationTable
+    Export:
+      Name: ITOps-ConversationTable
