@@ -1,0 +1,4 @@
+﻿AWS_ACCOUNT_ID=005185643085
+AWS_REGION=us-east-1
+LAMBDA_ROLE_ARN=arn:aws:iam::005185643085:role/ITOps-Lambda-ExecutionRole
+STEPFUNCTIONS_ROLE_ARN=arn:aws:iam::005185643085:role/ITOps-StepFunctions-ExecutionRole
