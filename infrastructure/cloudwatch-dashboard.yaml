@@ -1,0 +1,380 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudWatch Dashboard and Alarms for Multi-Agent IT Operations System'
+
+Resources:
+  # Main Dashboard
+  MultiAgentDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: ITOps-MultiAgent-System
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/Lambda", "Invocations", {"stat": "Sum", "label": "Triage Agent"}, {"dimensions": {"FunctionName": "ITOps-Agent-Triage"}}],
+                  ["...", {"dimensions": {"FunctionName": "ITOps-Agent-RootCause"}, "label": "Root Cause Agent"}],
+                  ["...", {"dimensions": {"FunctionName": "ITOps-Agent-Remediation"}, "label": "Remediation Agent"}]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "🤖 Agent Invocations (Last 3 Hours)",
+                "yAxis": {"left": {"min": 0}},
+                "view": "timeSeries",
+                "stacked": false
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/Lambda", "Errors", {"stat": "Sum", "color": "#d62728"}, {"dimensions": {"FunctionName": "ITOps-Agent-Triage"}}],
+                  ["...", {"dimensions": {"FunctionName": "ITOps-Agent-RootCause"}}],
+                  ["...", {"dimensions": {"FunctionName": "ITOps-Agent-Remediation"}}]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "❌ Agent Errors",
+                "yAxis": {"left": {"min": 0}},
+                "view": "timeSeries",
+                "stacked": false
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/Lambda", "Duration", {"stat": "Average", "label": "Triage Avg"}, {"dimensions": {"FunctionName": "ITOps-Agent-Triage"}}],
+                  ["...", {"stat": "p99", "label": "Triage p99"}, {"dimensions": {"FunctionName": "ITOps-Agent-Triage"}}],
+                  ["...", {"stat": "Average", "label": "RootCause Avg"}, {"dimensions": {"FunctionName": "ITOps-Agent-RootCause"}}],
+                  ["...", {"stat": "p99", "label": "RootCause p99"}, {"dimensions": {"FunctionName": "ITOps-Agent-RootCause"}}]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "title": "⏱️ Agent Latency (milliseconds)",
+                "yAxis": {"left": {"min": 0}},
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/Lambda", "ConcurrentExecutions", {"stat": "Maximum"}, {"dimensions": {"FunctionName": "ITOps-Agent-Triage"}}],
+                  ["...", {"dimensions": {"FunctionName": "ITOps-Agent-RootCause"}}],
+                  ["...", {"dimensions": {"FunctionName": "ITOps-Agent-Remediation"}}]
+                ],
+                "period": 300,
+                "stat": "Maximum",
+                "region": "${AWS::Region}",
+                "title": "🔄 Concurrent Executions",
+                "yAxis": {"left": {"min": 0}},
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 12,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/States", "ExecutionsStarted", {"stat": "Sum"}, {"dimensions": {"StateMachineArn": "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:ITOps-MultiAgentOrchestrator"}}],
+                  [".", "ExecutionsSucceeded", {"stat": "Sum"}, {"dimensions": {"StateMachineArn": "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:ITOps-MultiAgentOrchestrator"}}],
+                  [".", "ExecutionsFailed", {"stat": "Sum"}, {"dimensions": {"StateMachineArn": "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:ITOps-MultiAgentOrchestrator"}}],
+                  [".", "ExecutionsTimedOut", {"stat": "Sum"}, {"dimensions": {"StateMachineArn": "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:ITOps-MultiAgentOrchestrator"}}]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "🔧 Step Functions Executions",
+                "view": "timeSeries",
+                "stacked": false
+              }
+            },
+            {
+              "type": "metric",
+              "x": 8,
+              "y": 12,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/States", "ExecutionTime", {"stat": "Average"}, {"dimensions": {"StateMachineArn": "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:ITOps-MultiAgentOrchestrator"}}],
+                  ["...", {"stat": "p99"}]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "${AWS::Region}",
+                "title": "⏱️ Step Functions Duration (ms)",
+                "yAxis": {"left": {"min": 0}},
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 16,
+              "y": 12,
+              "width": 8,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/States", "ExecutionsAborted", {"stat": "Sum"}, {"dimensions": {"StateMachineArn": "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:ITOps-MultiAgentOrchestrator"}}],
+                  [".", "ExecutionThrottled", {"stat": "Sum"}, {"dimensions": {"StateMachineArn": "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:ITOps-MultiAgentOrchestrator"}}]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "⚠️ Step Functions Issues",
+                "yAxis": {"left": {"min": 0}},
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "log",
+              "x": 0,
+              "y": 18,
+              "width": 24,
+              "height": 6,
+              "properties": {
+                "query": "SOURCE '/aws/lambda/ITOps-Agent-Triage'\n| SOURCE '/aws/lambda/ITOps-Agent-RootCause'\n| SOURCE '/aws/lambda/ITOps-Agent-Remediation'\n| fields @timestamp, @message\n| filter @message like /ERROR/\n| sort @timestamp desc\n| limit 50",
+                "region": "${AWS::Region}",
+                "title": "🔴 Recent Agent Errors (Last 50)",
+                "stacked": false
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 24,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/DynamoDB", "ConsumedReadCapacityUnits", {"stat": "Sum"}, {"dimensions": {"TableName": "ITOps-Incidents"}}],
+                  [".", "ConsumedWriteCapacityUnits", {"stat": "Sum"}, {"dimensions": {"TableName": "ITOps-Incidents"}}]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "💾 DynamoDB Capacity - Incidents Table",
+                "yAxis": {"left": {"min": 0}},
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 24,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/DynamoDB", "UserErrors", {"stat": "Sum"}, {"dimensions": {"TableName": "ITOps-Incidents"}}],
+                  [".", "SystemErrors", {"stat": "Sum"}, {"dimensions": {"TableName": "ITOps-Incidents"}}]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "❌ DynamoDB Errors - Incidents Table",
+                "yAxis": {"left": {"min": 0}},
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 30,
+              "width": 24,
+              "height": 6,
+              "properties": {
+                "metrics": [
+                  ["AWS/Lambda", "Invocations", {"stat": "Sum"}, {"dimensions": {"FunctionName": "ITOps-MCP-Monitoring"}}],
+                  ["...", {"dimensions": {"FunctionName": "ITOps-MCP-Incident"}}],
+                  ["...", {"dimensions": {"FunctionName": "ITOps-ExecuteRemediation"}}],
+                  ["...", {"dimensions": {"FunctionName": "ITOps-VerifyResolution"}}]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "${AWS::Region}",
+                "title": "🔧 MCP Tools & Support Functions Usage",
+                "yAxis": {"left": {"min": 0}},
+                "view": "timeSeries"
+              }
+            }
+          ]
+        }
+
+  # CloudWatch Alarms
+  TriageAgentErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ITOps-TriageAgent-HighErrors
+      AlarmDescription: Alert when Triage Agent has high error rate
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: ITOps-Agent-Triage
+      TreatMissingData: notBreaching
+
+  RootCauseAgentErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ITOps-RootCauseAgent-HighErrors
+      AlarmDescription: Alert when Root Cause Agent has high error rate
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: ITOps-Agent-RootCause
+      TreatMissingData: notBreaching
+
+  RemediationAgentErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ITOps-RemediationAgent-HighErrors
+      AlarmDescription: Alert when Remediation Agent has high error rate
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: ITOps-Agent-Remediation
+      TreatMissingData: notBreaching
+
+  StepFunctionsFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ITOps-StepFunctions-ExecutionFailures
+      AlarmDescription: Alert on Step Functions execution failures
+      MetricName: ExecutionsFailed
+      Namespace: AWS/States
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: StateMachineArn
+          Value: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:ITOps-MultiAgentOrchestrator'
+      TreatMissingData: notBreaching
+
+  TriageAgentLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ITOps-TriageAgent-HighLatency
+      AlarmDescription: Alert when Triage Agent latency is high
+      MetricName: Duration
+      Namespace: AWS/Lambda
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 30000
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: ITOps-Agent-Triage
+      TreatMissingData: notBreaching
+
+  RootCauseAgentLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ITOps-RootCauseAgent-HighLatency
+      AlarmDescription: Alert when Root Cause Agent latency is high
+      MetricName: Duration
+      Namespace: AWS/Lambda
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 45000
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: ITOps-Agent-RootCause
+      TreatMissingData: notBreaching
+
+  DynamoDBThrottlingAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: ITOps-DynamoDB-Throttling
+      AlarmDescription: Alert on DynamoDB throttling
+      MetricName: UserErrors
+      Namespace: AWS/DynamoDB
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: TableName
+          Value: ITOps-Incidents
+      TreatMissingData: notBreaching
+
+  # Log Groups with Retention
+  TriageAgentLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/ITOps-Agent-Triage
+      RetentionInDays: 7
+
+  RootCauseAgentLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/ITOps-Agent-RootCause
+      RetentionInDays: 7
+
+  RemediationAgentLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/ITOps-Agent-Remediation
+      RetentionInDays: 7
+
+Outputs:
+  DashboardURL:
+    Description: CloudWatch Dashboard URL
+    Value: !Sub 'https://console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${MultiAgentDashboard}'
+    Export:
+      Name: ITOps-DashboardURL
+
+  DashboardName:
+    Description: Dashboard Name
+    Value: !Ref MultiAgentDashboard
+    Export:
+      Name: ITOps-DashboardName
